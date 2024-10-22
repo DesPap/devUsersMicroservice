@@ -13,10 +13,15 @@ return [
     |
     */
 
-    'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
-        'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
-    ],
+    // 'defaults' => [
+    //     'guard' => env('AUTH_GUARD', 'web'),
+    //     'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
+    // ],
+
+        'defaults' => [
+            'guard' => 'keycloak',
+            'passwords' => 'users',
+        ],
 
     /*
     |--------------------------------------------------------------------------
@@ -39,6 +44,10 @@ return [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+        ],
+        'keycloak' => [
+        'driver' => 'keycloak',
+        'provider' => 'users',
         ],
     ],
 
