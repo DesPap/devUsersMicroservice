@@ -1,0 +1,67 @@
+services:
+  app:
+    # image: php:8.3-fpm
+    build: .
+    container_name: Laravel_app
+    # volumes: only for development environment not production
+    volumes:
+      - .:/var/www/html
+    # working_dir: /var/www/html
+    # networks: allows save and secured communication between the containers
+    networks:
+      - app-network
+    ports:
+      - "8002:8000"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+    ports:
+      - 5435:5432
+
+  keycloak:
+    # image: quay.io/keycloak/keycloak:25.0.5
+    build:
+      context: .  # The directory where the Dockerfile is located
+      dockerfile: Dockerfile.keycloak  # The custom Dockerfile for Keycloak
+    container_name: Keycloak
+    environment:
+      - KC_DB_VENDOR=postgres
+      - KC_DB_URL_HOST=${DB_HOST}
+      - KC_DB_URL_PORT=${DB_PORT}
+      - KC_DB_URL_DATABASE=${DB_DATABASE}
+      - KC_DB_USERNAME=${DB_USERNAME}
+      - KC_DB_PASSWORD=${DB_PASSWORD}
+      - KEYCLOAK_USER=${KEYCLOAK_USER}
+      - KEYCLOAK_PASSWORD=${KEYCLOAK_PASSWORD}
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD} 
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - KC_HTTP_ENABLED=true
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres
+    command: ["start-dev"]
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  pgdata: {}
