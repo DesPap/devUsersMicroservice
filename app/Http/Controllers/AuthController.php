@@ -3,56 +3,41 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
-    // Register a new user
-    public function register(Request $request)
+    public function redirectToProvider()
     {
-        $validated = $request->validate([
-            'email' => 'required|email|unique:users',
-            'password' => 'required|min:6',
-            'username' => 'required|unique:users',
-        ]);
-
-        $user = User::create([
-            'id' => Str::uuid(),
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'username' => $validated['username'],
-        ]);
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json(['message' => 'Registration successful', 'token' => $token], 201);
+        return redirect()->route('auth.callback');
     }
 
-    // Login
-    public function login(Request $request)
+    public function handleProviderCallback(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+        // Get the user info from the decoded JWT token
+        $decodedToken = $request->user()->token; // Adjust based on the JWT structure
 
-        if (!Auth::attempt($credentials)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
-        }
+        $user = User::updateOrCreate(
+            ['keycloak_id' => $decodedToken['sub']],
+            [
+                'email' => $decodedToken['email'],
+                'username' => $decodedToken['preferred_username'],
+            ]
+        );
 
-        $user = Auth::user();
-        $token = $user->createToken('auth_token')->plainTextToken;
+        // Store the decoded token in session
+        session(['keycloak_token' => $decodedToken]);
 
-        return response()->json(['message' => 'Login successful', 'token' => $token], 200);
+        Auth::login($user);
+
+        return response()->json(['message' => 'Authenticated successfully']);
     }
 
-    // Logout
-    public function logout()
+    public function logout(Request $request)
     {
-        Auth::user()->tokens()->delete();
-        return response()->json(['message' => 'Logout successful'], 200);
+        Auth::logout();
+        $request->session()->invalidate();
+        return response()->json(['message' => 'Logged out successfully']);
     }
 }

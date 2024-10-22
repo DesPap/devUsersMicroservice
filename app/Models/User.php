@@ -2,34 +2,33 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory;
+    use Notifiable;
 
-    protected $table = 'user_entity';
+    protected $table = 'user';
 
     protected $primaryKey = 'id';
 
-    protected $fillable = ['username', 'email', 'email_constraint', 'email_verified', 
-    'enabled', 'federation_link', 'first_name', 'last_name', 'realm_id', 'username', 
-    'created_timestamp', 'service_account_client_link', 'not_before'];
+    protected $fillable = ['keycloak_id', 'email', 'password', 'username'];
 
     protected $hidden = ['password'];
 
-    //user_role_mapping links users to roles.
-    public function roles()
+    // Method to check if user has a specific role
+    public function hasRole($role)
     {
-        return $this->belongsToMany(Role::class, 'user_role_mapping', 'user_id', 'role_id');
+        // Assuming roles are included in the JWT token and stored in a decoded_token attribute
+        $roles = $this->decoded_token['roles'] ?? [];
+
+        return in_array($role, $roles);
     }
 
-    //links users to groups
-    public function clients()
+    // Accessor to get decoded JWT token from the session
+    public function getDecodedTokenAttribute()
     {
-        return $this->belongsToMany(Client::class, 'user_id');
+        return session('keycloak_token');
     }
 }

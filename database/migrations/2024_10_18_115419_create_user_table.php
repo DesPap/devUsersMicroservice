@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('user', function (Blueprint $table) {
             $table->uuid('id')->primary(); // Using UUID for primary key
             $table->string('keycloak_id')->unique()->nullable();
             $table->string('email')->unique();
