@@ -14,22 +14,15 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::get('auth/login', [AuthController::class, 'redirectToProvider'])->name('auth.login');
-Route::get('auth/callback', [AuthController::class, 'handleProviderCallback'])->name('auth.callback');
-Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+// Route::post('auth/login', [AuthController::class, 'authenticate']);
+Route::post('auth/login', [AuthController::class, 'authenticate']);
+Route::post('/auth/register', [AuthController::class, 'registerUser']);
+Route::post('auth/logout', [AuthController::class, 'logout']);
+Route::get('after_logout', function () {
+    $message = session('message', 'Determining a Valid post logout redirect URI in Keycloak Client Settings ');
+    return response()->json(['message' => $message]);
+})->name('after.logout');
 
-Route::middleware(['auth', 'checkrole:admin'])->group(function () {
-    Route::get('/admin', [AdminController::class, 'indexAdmin'])->name('admin.dashboard');
-});
+Route::get('auth/callback', [AuthController::class, 'callback']);
+Route::post('/auth/unregister', [AuthController::class, 'unregisterUser']);
 
-Route::middleware(['auth', 'checkrole:master'])->group(function () {
-    Route::get('/master', [MasterController::class, 'indexMaster'])->name('master.dashboard');
-});
-
-Route::middleware(['auth', 'checkrole:editor'])->group(function () {
-    Route::get('/editor', [EditorController::class, 'indexEditor'])->name('editor.dashboard');
-});
-
-Route::middleware(['auth', 'checkrole:client'])->group(function () {
-    Route::get('/client', [ClientController::class, 'indexClient'])->name('client.dashboard');
-});

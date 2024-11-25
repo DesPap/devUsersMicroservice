@@ -13,14 +13,12 @@ class User extends Authenticatable
 
     protected $primaryKey = 'id';
 
-    protected $fillable = ['keycloak_id', 'email', 'password', 'username'];
-
-    protected $hidden = ['password'];
+    protected $fillable = ['keycloak_id', 'email', 'username', 'first_name', 'last_name', 'role', 'is_active'];
 
     // Method to check if user has a specific role
     public function hasRole($role)
     {
-        // Assuming roles are included in the JWT token and stored in a decoded_token attribute
+        // roles are included in the JWT token and stored in a decoded_token attribute
         $roles = $this->decoded_token['roles'] ?? [];
 
         return in_array($role, $roles);

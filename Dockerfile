@@ -7,11 +7,16 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     git \
+    curl \
     && docker-php-ext-install pdo pdo_pgsql
 
     # Install Composer
     COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
     
+    # Install Node.js and npm
+    RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
+    apt-get install -y nodejs
+
     WORKDIR /var/www/html
 
     # Copy all files from the current directory on the host to the working directory in the container
@@ -19,6 +24,19 @@ RUN apt-get update && apt-get install -y \
 
     # Install Laravel Socialite and Passport
     RUN composer require laravel/socialite laravel/passport
+
+    # Ensure proper permissions for Laravel directories
+    RUN mkdir -p /var/www/html/public/build && \
+    chown -R www-data:www-data /var/www/html/public /var/www/html/storage /var/www/html/bootstrap/cache && \
+    chmod -R 775 /var/www/html/public /var/www/html/storage /var/www/html/bootstrap/cache
+
+    # Install React dependencies and build the frontend
+    WORKDIR /var/www/html/resources/js
+    RUN npm install
+    RUN npm run build
+
+    # Return to the Laravel directory
+    WORKDIR /var/www/html
 
     # Ensure proper ownership for Laravel directories
     RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache

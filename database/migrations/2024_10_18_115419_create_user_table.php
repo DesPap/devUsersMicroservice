@@ -12,12 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('user', function (Blueprint $table) {
-            $table->uuid('id')->primary(); // Using UUID for primary key
-            $table->string('keycloak_id')->unique()->nullable();
+            $table->id();
+            $table->string('keycloak_id')->unique();
             $table->string('email')->unique();
-            $table->string('password');
             $table->string('username')->unique();
-            // $table->text('avatar_url')->nullable(); // Avatar URL can be nullable
+            $table->string('first_name');
+            $table->string('last_name');
+            $table->string('role')->nullable();
+            $table->boolean('is_active')->default(true);
             $table->timestamps(); // created_at and updated_at
         });
     }

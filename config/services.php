@@ -36,18 +36,11 @@ return [
     ],
 
     'keycloak' => [
-    'client_id' => env('KEYCLOAK_CLIENT_ID'),
-    'client_secret' => env('KEYCLOAK_CLIENT_SECRET'),
-    'redirect' => env('KEYCLOAK_REDIRECT_URI'),
-    'base_url' => env('KEYCLOAK_BASE_URL'),
-    'realm' => env('KEYCLOAK_REALM'),
+    'client_id' => config('keycloak.client_id'),
+    'client_secret' => config('keycloak.client_secret'),
+    'redirect_uri' => config('keycloak.redirect_uri'),
+    'base_url' => config('keycloak.base_url'),
+    'external_base_url' => config('keycloak.external_base_url'),
+    'realm' => config('keycloak.realm'),
     ],
-
-
-    'google' => [
-    'client_id' => env('GOOGLE_CLIENT_ID'),
-    'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-    'redirect' => env('GOOGLE_REDIRECT_URI'),
-],
-
 ];

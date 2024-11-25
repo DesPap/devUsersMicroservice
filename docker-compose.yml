@@ -16,6 +16,9 @@ services:
       - .env
     depends_on:
       - postgres
+      - keycloak
+    # extra_hosts:
+    #   - "keycloak:host.docker.internal"
 
   postgres:
     image: postgres:16
@@ -62,6 +65,7 @@ services:
 networks:
   app-network:
     driver: bridge
+    # external: true
 
 volumes:
   pgdata: {}
