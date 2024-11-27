@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import ReactDOM from 'react-dom/client'
+import ReactDOM from 'react-dom/client';
 
 // Perfect Scrollbar
 import 'react-perfect-scrollbar/dist/css/styles.css';

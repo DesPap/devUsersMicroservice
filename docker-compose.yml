@@ -17,6 +17,7 @@ services:
     depends_on:
       - postgres
       - keycloak
+      # - frontend
     # extra_hosts:
     #   - "keycloak:host.docker.internal"
 
@@ -61,6 +62,18 @@ services:
     command: ["start-dev"]
     networks:
       - app-network
+
+  # frontend:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.frontend
+  #   container_name: React_frontend
+  #   volumes:
+  #     - .:/usr/src/app
+  #   networks:
+  #     - app-network
+  #   ports:
+  #     - "3000:3000"
 
 networks:
   app-network:
