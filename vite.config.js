@@ -31,7 +31,7 @@ export default defineConfig({
     ],
     resolve: {
         alias: {
-            "@": path.resolve(__dirname, "./src"),
+            "@": path.resolve(__dirname, "resources/js/src"),
         },
     },
     build: {
@@ -39,23 +39,5 @@ export default defineConfig({
         emptyOutDir: true, // Ensure old build files are removed
     },
 });
-
-// export default defineConfig({
-//     plugins: [
-//         react(),
-//     ],
-//     resolve: {
-//         alias: {
-//             '@': path.resolve(__dirname, './resources/js/src'),
-//         },
-//     },
-//     build: {
-//         rollupOptions: {
-//             input: 'resources/js/src/main.tsx', // Correct entry point for your React project
-//         },
-//         outDir: './public/build', // Adjust this based on where you want the build files
-//         emptyOutDir: true, // Ensure the output directory is cleared before building
-//     },
-// });
 
 

@@ -17,7 +17,6 @@ services:
     depends_on:
       - postgres
       - keycloak
-      # - frontend
     # extra_hosts:
     #   - "keycloak:host.docker.internal"
 
@@ -63,17 +62,23 @@ services:
     networks:
       - app-network
 
-  # frontend:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.frontend
-  #   container_name: React_frontend
-  #   volumes:
-  #     - .:/usr/src/app
-  #   networks:
-  #     - app-network
-  #   ports:
-  #     - "3000:3000"
+  react:
+    build:
+      context: .
+      dockerfile: Dockerfile.react
+    container_name: React
+    volumes:
+      - .:/usr/src/app  
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8002
+      - CHOKIDAR_USEPOLLING=true
+      - VITE_HOST=0.0.0.0
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    depends_on:
+      - app
 
 networks:
   app-network:

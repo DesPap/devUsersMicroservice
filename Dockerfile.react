@@ -1,0 +1,32 @@
+# the official Node.js image
+FROM node:18
+
+# Set the working directory in the container
+WORKDIR /usr/src/app
+
+# Copy essential files into the container
+COPY package*.json ./
+
+# Install dependencies
+RUN npm cache clean --force
+# RUN npm install
+RUN npm install --include=dev 
+# && \
+    # ls node_modules/vite && echo "Vite installed" || echo "Vite not installed"
+
+# Copy the rest of the React app files (resources/js)
+COPY resources/js ./resources/js
+
+# Copy TypeScript configuration
+COPY tsconfig.json ./ tsconfig.node.json ./
+
+# # Build the React app
+RUN npm run build
+
+
+# Expose the React dev server port (for development)
+EXPOSE 3000
+
+# Command to run the React app
+# CMD ["npm", "run", "dev"]
+CMD ["npx", "vite"]
