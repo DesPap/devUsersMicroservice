@@ -34,6 +34,10 @@ export default defineConfig({
             "@": path.resolve(__dirname, "resources/js/src"),
         },
     },
+    server: {
+        host: "0.0.0.0", // Makes the Vite server accessible externally
+        port: 5173, // Match the port with Docker
+    },
     build: {
         outDir: path.resolve(__dirname, "public/build"), // Output directory for production files
         emptyOutDir: true, // Ensure old build files are removed
