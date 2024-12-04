@@ -23,6 +23,8 @@
     </noscript>
 
     <div id="root"></div>
+    @viteReactRefresh
+    @vite(['resources/js/src/main.tsx'])
 </body>
 
 </html>

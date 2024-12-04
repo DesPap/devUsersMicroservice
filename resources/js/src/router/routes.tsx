@@ -26,7 +26,7 @@ const Timeline = lazy(() => import('../pages/Components/Timeline'));
 const Notification = lazy(() => import('../pages/Components/Notification'));
 const MediaObject = lazy(() => import('../pages/Components/MediaObject'));
 const ListGroup = lazy(() => import('../pages/Components/ListGroup'));
-const PricingTable = lazy(() => import('../pages/Components/PricingTable'));
+const PricingTable = lazy(() => import('../pages/Components/PricingTable'));``
 const LightBox = lazy(() => import('../pages/Components/LightBox'));
 const Alerts = lazy(() => import('../pages/Elements/Alerts'));
 const Avatar = lazy(() => import('../pages/Elements/Avatar'));

@@ -17,6 +17,15 @@ class AuthController extends Controller
  */
 
  {
+
+    public function checkAuthStatus(Request $request)
+    {
+        if (Auth::check()) {
+            return response()->json(['authenticated' => true]);
+        }
+        return response()->json(['authenticated' => false], 401);
+    }
+
     /**
      * Handle authentication and token exchange in order for the user to login.
      */
