@@ -5,7 +5,10 @@
     "moduleResolution": "Node",
     "allowSyntheticDefaultImports": true,
     "allowJs": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "outDir": "build", // Specify a separate directory for output
+    "rootDir": "./"
   },
-  "include": ["resources/js/src/**/*", "vite.config.js"]
+  "include": ["resources/js/src/**/*", "vite.config.js"],
+  "exclude": ["build"] 
 }

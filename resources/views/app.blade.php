@@ -12,9 +12,10 @@
     <link rel="shortcut icon" href="{{ asset('favicon.png') }}">
 
     <link href="https://fonts.googleapis.com/css?family=Nunito:400,600,700" rel="stylesheet">
-
-    @viteReactRefresh
+    
+    @viteReactRefresh 
     @vite(['resources/js/src/main.tsx'])
+    
 </head>
 
 <body>
@@ -23,8 +24,6 @@
     </noscript>
 
     <div id="root"></div>
-    @viteReactRefresh
-    @vite(['resources/js/src/main.tsx'])
 </body>
 
 </html>

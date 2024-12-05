@@ -69,10 +69,13 @@ services:
     container_name: React
     volumes:
       - .:/usr/src/app  
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-      - VITE_HOST=0.0.0.0
-      - VITE_API_BASE_URL=http://localhost:8002
+    # environment:
+      # - CHOKIDAR_USEPOLLING=true
+      # - VITE_HOST=0.0.0.0
+      # - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+      # - VITE_LARAVEL_PUBLIC_URL=${VITE_LARAVEL_PUBLIC_URL}
+    env_file:
+      .env
     ports:
       - "5173:5173"
     networks:

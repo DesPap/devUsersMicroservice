@@ -1,6 +1,5 @@
 import React, { Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
-import AllPages from './pages/Pages/AllPages';
 
 // Perfect Scrollbar
 import 'react-perfect-scrollbar/dist/css/styles.css';
@@ -11,40 +10,41 @@ import './tailwind.css';
 // i18n (needs to be bundled)
 import './i18n';
 
-// Router
+// // Router
 import { RouterProvider } from 'react-router-dom';
 import router from './router/index';
 
 // Redux
 import { Provider } from 'react-redux';
 import store from './store/index';
+// import App from './App';
 
-// import keycloak from './keycloak';
-// import { ReactKeycloakProvider } from '@react-keycloak/web';
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+    <React.StrictMode>
+        <Suspense>
+            <Provider store={store}>
+                <RouterProvider router={router} />
+                {/* <App /> */}
+            </Provider>
+            {/* <App>
+                    <RouterProvider router={router} />
+                </App> */}
+        </Suspense>
+    </React.StrictMode>
+);
 
-const eventLogger = (eventType: string) => {
-    console.log(`[Keycloak Event] ${eventType}`);
-};
+console.log('Redux store:', store.getState());
 
-const tokenLogger = (tokens: any) => {
-    console.log(`[Keycloak Token]`, tokens);
-};
+// import { BrowserRouter } from 'react-router-dom';
+// import ReactDOM from 'react-dom/client'
+// import React from 'react';
+// import App from './App';
 
 // ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
 //     <React.StrictMode>
-//         {/* <ReactKeycloakProvider authClient={keycloak} onEvent={eventLogger} onTokens={tokenLogger}> */}
-//             <Suspense>
-//                 <Provider store={store}>
-//                     <RouterProvider router={router} />
-//                 </Provider>
-//             </Suspense>
-//         {/* </ReactKeycloakProvider> */}
+//         <BrowserRouter>
+//             <App />
+//         </BrowserRouter>
 //     </React.StrictMode>
 // );
-console.log("React App Mounted");
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-    <React.StrictMode>
-        <AllPages />
-    </React.StrictMode>
-);
 

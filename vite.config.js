@@ -1,7 +1,7 @@
-import { defineConfig } from 'vite';
-import laravel from 'laravel-vite-plugin';
-import react from '@vitejs/plugin-react';
-import path from 'path';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import path from "path";
+import laravel from "laravel-vite-plugin";
 
 // export default defineConfig({
 //     plugins: [
@@ -36,7 +36,13 @@ export default defineConfig({
     },
     server: {
         host: "0.0.0.0", // Makes the Vite server accessible externally
+        // host: "localhost",
         port: 5173, // Match the port with Docker
+        strictPort: true, // Ensures the exact port is used
+        hmr: {
+            host: 'localhost', // This should be the public hostname or IP
+            port: 5173, // Match the development server port
+        },
     },
     build: {
         outDir: path.resolve(__dirname, "public/build"), // Output directory for production files
