@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { setPageTitle, toggleRTL } from '../../store/themeConfigSlice';
 import Dropdown from '../../components/Dropdown';
 import i18next from 'i18next';
+import axios from 'axios';
 
 const LoginBoxed = () => {
     const dispatch = useDispatch();
@@ -25,8 +26,77 @@ const LoginBoxed = () => {
     };
     const [flag, setFlag] = useState(themeConfig.locale);
 
-    const submitForm = () => {
-        navigate('/');
+    // const submitForm = () => {
+    //     navigate('/');
+    // };
+
+    const submitForm = async (e: React.FormEvent) => {
+        e.preventDefault();
+        console.log('Submit button clicked');
+    
+        const username = (document.getElementById('Email') as HTMLInputElement).value;
+        const password = (document.getElementById('Password') as HTMLInputElement).value;
+    
+        if (!username || !password) {
+            alert('Email and password are required.');
+            return;
+        }
+
+        try {
+            // Make API call to Laravel for authentication
+            const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/login`, {
+                username, // Send email as username
+                password,
+                client_id: import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
+                client_secret: import.meta.env.VITE_KEYCLOAK_CLIENT_SECRET,
+            },
+            { headers: { 'Content-Type': 'application/json' } }
+        );
+    
+            // // Store the token
+            // const token = response.data.token_data.access_token;
+
+            const { authenticated, roles, user } = response.data;
+            
+            // // Use the token in Authorization headers for future requests
+            // if (token) {
+            //     localStorage.setItem('access_token', token);
+            //     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            // } else {
+            //     console.warn('No token found in Local Storage');
+            // }
+
+            if (authenticated) {
+                localStorage.setItem('user_role', roles); // Store role in localStorage
+                localStorage.setItem('user_info', JSON.stringify(user)); // Store user info in localStorage
+                // Redirect based on role
+            if (roles === 'admin_client') {
+                navigate('/');
+            } else {
+                navigate('/users/profile');
+            }
+            } else {
+                alert('Authentication failed.');
+            }
+        } catch (error: any) {
+            console.error('Login failed:', error.response?.data?.error || error.message);
+            alert(`Login failed: ${error.response?.data?.error || error.message}`);
+    
+            // Redirect to signup if user not found
+            if (error.response?.status === 404) {
+                navigate('/auth/boxed-signup');
+            }
+            else {
+                alert(`Login failed: ${error.response?.data?.error || error.message}`);
+            }
+        }
+
+        console.log({
+            username,
+            password,
+            client_id: import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
+            client_secret: import.meta.env.VITE_KEYCLOAK_CLIENT_SECRET,
+        });
     };
 
     return (

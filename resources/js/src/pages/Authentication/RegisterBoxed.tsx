@@ -5,6 +5,7 @@ import { setPageTitle, toggleRTL } from '../../store/themeConfigSlice';
 import { useEffect, useState } from 'react';
 import Dropdown from '../../components/Dropdown';
 import i18next from 'i18next';
+import axios from 'axios';
 
 const RegisterBoxed = () => {
     const dispatch = useDispatch();
@@ -25,8 +26,35 @@ const RegisterBoxed = () => {
     };
     const [flag, setFlag] = useState(themeConfig.locale);
 
-    const submitForm = () => {
-        navigate('/');
+    // const submitForm = () => {
+    //     navigate('/');
+    // };
+
+    const submitForm = async (event: React.FormEvent) => {
+        event.preventDefault();
+    
+        const username = (document.getElementById('Name') as HTMLInputElement).value;
+        const email = (document.getElementById('Email') as HTMLInputElement).value;
+        const password = (document.getElementById('Password') as HTMLInputElement).value;
+    
+        try {
+            // Make API call to Laravel for registration
+            const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/register`, {
+                username,
+                email,
+                password,
+            },
+            { headers: { 'Content-Type': 'application/json' } }
+        );
+    
+            // Store the token in localStorage
+            localStorage.setItem('access_token', response.data.token);
+    
+            // Redirect to profile or another page after successful registration
+            navigate('/users/profile');
+        } catch (error) {
+            console.error('Registration failed:', error);
+        }
     };
 
     return (

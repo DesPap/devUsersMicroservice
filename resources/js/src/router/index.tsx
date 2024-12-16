@@ -1,12 +1,28 @@
 import { createBrowserRouter } from 'react-router-dom';
 import BlankLayout from '../components/Layouts/BlankLayout';
 import DefaultLayout from '../components/Layouts/DefaultLayout';
-import { routes } from './routes';
+import ProtectedRoute from '../components/ProtectedRoute';
+import { routes , userRoutes } from './routes';
 
+// const finalRoutes = routes.map((route) => {
+//     return {
+//         ...route,
+//         element: route.layout === 'blank' ? <BlankLayout>{route.element}</BlankLayout> : <DefaultLayout>{route.element}</DefaultLayout>,
+//     };
+// });
+
+
+// Add ProtectedRoute for userRoutes
 const finalRoutes = routes.map((route) => {
     return {
         ...route,
-        element: route.layout === 'blank' ? <BlankLayout>{route.element}</BlankLayout> : <DefaultLayout>{route.element}</DefaultLayout>,
+        element: route.layout === 'blank'
+            ? <BlankLayout>{route.element}</BlankLayout>
+            : (
+                <ProtectedRoute allowedRoles={['user', 'admin']}>
+                    <DefaultLayout>{route.element}</DefaultLayout>
+                </ProtectedRoute>
+            ),
     };
 });
 
@@ -14,30 +30,4 @@ const router = createBrowserRouter(finalRoutes);
 
 export default router;
 
-// import React from 'react';
-// import ReactDOM from 'react-dom/client';
-// import { RouterProvider, createBrowserRouter } from 'react-router-dom';
-// import { routes } from './routes'; // Import simplified routes
 
-// // Create the router directly from the routes
-// const router = createBrowserRouter(routes);
-
-// ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-//     <React.StrictMode>
-//         <RouterProvider router={router} />
-//     </React.StrictMode>
-// );
-
-
-
-
-// import React from 'react';
-// import ReactDOM from 'react-dom/client';
-
-// const App = () => <div>Hello, World!</div>;
-
-// ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
-//     <React.StrictMode>
-//         <App />
-//     </React.StrictMode>
-// );

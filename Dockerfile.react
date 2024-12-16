@@ -1,33 +1,29 @@
-# the official Node.js image
 FROM node:18
 
 # Set the working directory in the container
 WORKDIR /usr/src/app
 
-# Copy essential files into the container
+# Copy only package.json and package-lock.json for dependency installation
+# Docker only re-installs dependencies if the package files change
 COPY package*.json ./
 
-# Install dependencies
+# Clean npm cache and Install dependencies
 RUN npm cache clean --force
-# RUN npm install
-RUN npm install --include=dev 
-# && \
-    # ls node_modules/vite && echo "Vite installed" || echo "Vite not installed"
+RUN npm install --include=dev
 
 # Copy the rest of the React app files (resources/js)
 COPY resources/js ./resources/js
 
 # Copy TypeScript configuration
-COPY tsconfig.json ./ tsconfig.node.json ./
+COPY tsconfig.json ./tsconfig.json
+COPY tsconfig.node.json ./tsconfig.node.json
 
-# # Build the React app
-RUN npm run build
+# Build the React app for production
+# RUN npm run build
 
 
-# Expose the React dev server port (for development)
+# Expose the React dev server port
 EXPOSE 5173
 
-# Command to run the React app
+# Run the React app
 CMD ["npm", "run", "dev"]
-# CMD ["npm", "run", "dev", "--", "--host"]
-# CMD ["npx", "vite"]

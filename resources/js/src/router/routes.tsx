@@ -100,6 +100,50 @@ const MarkDownEditor = lazy(() => import('../pages/Forms/MarkDownEditor'));
 const DateRangePicker = lazy(() => import('../pages/Forms/DateRangePicker'));
 const Clipboard = lazy(() => import('../pages/Forms/Clipboard'));
 
+const userRoutes = [
+    {
+        path: '/users/profile',
+        element: <Profile />,
+    },
+    {
+        path: '/users/user-account-settings',
+        element: <AccountSetting />,
+    },
+    {
+        path: '/apps/todolist',
+        element: <Todolist />,
+    },
+    {
+        path: '/apps/notes',
+        element: <Notes />,
+    },
+    {
+        path: '/apps/contacts',
+        element: <Contacts />,
+    },
+    {
+        path: '/apps/mailbox',
+        element: <Mailbox />,
+    },
+    {
+        path: '/about',
+        element: <About />,
+        layout: 'blank',
+    },
+    {
+        path: '/apps/chat',
+        element: <Chat />,
+    },
+    {
+        path: '/apps/scrumboard',
+        element: <Scrumboard />,
+    },
+    {
+        path: '/apps/calendar',
+        element: <Calendar />,
+    },
+];
+
 const routes = [
     // dashboard
     {
@@ -544,7 +588,7 @@ const routes = [
     },
 ];
 
-export { routes };
+export { routes, userRoutes };
 
 
 

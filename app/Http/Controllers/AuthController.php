@@ -6,10 +6,13 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\Request;
 
 class AuthController extends Controller
 /**
+ * getUserInfo: fetch the latest user info and roles.
+ * checkAuthStatus: Validates the token with Keycloak and responds if the user is authenticated.
  * authenticate: Handles login in keycloak, checking if the user exists in the local db.
  * registerUser: Registers a new user in Keycloak and saves the data locally.
  * assignRoleToUser: Fetches roles from Keycloak and stores them locally, with Keycloak handling role permissions.
@@ -17,13 +20,50 @@ class AuthController extends Controller
  */
 
  {
+    /**
+     * getUserInfo: fetch the latest user info and roles.
+     */
 
+     public function getUserInfo(Request $request)
+     {
+         $keycloakUser = $request->keycloak_user; // Retrieved from middleware
+         return response()->json([
+             'user' => [
+                 'username' => $keycloakUser['preferred_username'],
+                 'email' => $keycloakUser['email'],
+                 'name' => $keycloakUser['name'] ?? null,
+                 'roles' => $keycloakUser['roles'] ?? ['user'],
+             ],
+         ]);
+     }
+
+
+    /**
+     *  Validate the token with Keycloak and responds if the user is authenticated. Verify authentication on protected routes
+     */
     public function checkAuthStatus(Request $request)
     {
-        if (Auth::check()) {
-            return response()->json(['authenticated' => true]);
+        $token = $request->bearerToken();
+    
+        if (!$token) {
+            return response()->json(['authenticated' => false, 'message' => 'Token missing'], 401);
         }
-        return response()->json(['authenticated' => false], 401);
+    
+        try {
+            // Validate the token with Keycloak's /userinfo endpoint
+            $response = Http::withToken($token)->get(config('keycloak.base_url') . '/realms/' . config('keycloak.realm') . '/protocol/openid-connect/userinfo');
+    
+            if ($response->failed()) {
+                return response()->json(['authenticated' => false, 'error' => 'Invalid access token'], 401);
+            }
+    
+            // Token is valid, return success
+            return response()->json(['authenticated' => true, 'user' => $response->json()]);
+        } catch (\Exception $e) {
+            Log::error('Error validating token with Keycloak: ' . $e->getMessage());
+    
+            return response()->json(['authenticated' => false, 'error' => 'Failed to validate token'], 500);
+        }
     }
 
     /**
@@ -65,7 +105,7 @@ class AuthController extends Controller
                 return response()->json(['error' => 'Invalid username or password.'], 401);
             }
     
-            // Retrieve user info from Keycloak (user ID, roles, etc.)
+            // Retrieve token and user info from Keycloak (user ID, roles, etc.)
             $tokenData = $response->json();
     
             // Fetch user details from Keycloak
@@ -79,6 +119,10 @@ class AuthController extends Controller
             }
     
             $userInfo = $userInfoResponse->json();
+
+            // Cache tokens
+            Cache::put("user_{$username}_access_token", $tokenData['access_token'], now()->addSeconds($tokenData['expires_in']));
+            Cache::put("user_{$username}_refresh_token", $tokenData['refresh_token'], now()->addSeconds($tokenData['refresh_expires_in']));
     
             // Ensure the user exists in the local database or create them
             $localUser = User::updateOrCreate(
@@ -89,6 +133,7 @@ class AuthController extends Controller
                     'first_name' => $userInfo['given_name'] ?? null,
                     'last_name' => $userInfo['family_name'] ?? null,
                     'is_active' => true,
+                    'role' => $userInfo['roles'][0] ?? 'user',
                 ]
             );
     
@@ -96,9 +141,16 @@ class AuthController extends Controller
             Auth::guard()->setUser($localUser);
     
             return response()->json([
-                'message' => 'Authenticated successfully',
-                'token_data' => $tokenData,
-                'user_info' => $userInfo,
+                // 'message' => 'Authenticated successfully',
+                // 'token_data' => $tokenData,
+                // 'user_info' => $userInfo,
+                'authenticated' => true,
+                'roles' => $userInfo['resource_access']['account']['roles'] ?? 'user',
+                'user' => [
+                    'username' => $userInfo['preferred_username'],
+                    'email' => $userInfo['email'],
+                    'name' => $userInfo['name'] ?? null,
+                ],
             ]);
         } catch (\Exception $e) {
             Log::error('Error during authentication: ' . $e->getMessage());
@@ -116,8 +168,6 @@ class AuthController extends Controller
             'client_id' => 'required|string',
             'client_secret' => 'required|string',
             'username' => 'required|string',
-            'first_name' => 'required|string',
-            'last_name' => 'required|string',
             'password' => 'required|string',
             'email' => 'required|string|email',
         ]);

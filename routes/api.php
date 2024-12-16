@@ -14,12 +14,14 @@ Route::post('auth/login', [AuthController::class, 'authenticate']);
 Route::post('/auth/register', [AuthController::class, 'registerUser']);
 
 Route::middleware(['keycloak'])->group(function ()
-{Route::post('auth/logout', [AuthController::class, 'logout']);
+{
+Route::post('auth/check', [AuthController::class, 'checkAuthStatus']);
+Route::post('auth/logout', [AuthController::class, 'logout']);
 Route::get('after_logout', function () {
     $message = session('message', 'Determining a Valid post logout redirect URI in Keycloak Client Settings ');
     return response()->json(['message' => $message]);
 })->name('after.logout');
 
-Route::get('auth/callback', [AuthController::class, 'callback']);
+
 Route::post('/auth/unregister', [AuthController::class, 'unregisterUser']);
 });
