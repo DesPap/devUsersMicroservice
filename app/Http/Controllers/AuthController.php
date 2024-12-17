@@ -99,10 +99,44 @@ class AuthController extends Controller
                 'password' => $password,
                 'scope' => 'openid profile email',
             ]);
-    
+
+
             if ($response->failed()) {
-                Log::error('Failed to authenticate user with Keycloak: ' . $response->body());
-                return response()->json(['error' => 'Invalid username or password.'], 401);
+                // Step 1: Obtain admin token to search for user existence
+                $adminResponse = Http::asForm()->post(config('keycloak.base_url') . '/realms/' . config('keycloak.realm') . '/protocol/openid-connect/token', [
+                    'client_id' => $clientId,
+                    'client_secret' => $clientSecret,
+                    'grant_type' => 'client_credentials',
+                ]);
+    
+                if ($adminResponse->failed()) {
+                    Log::error('Failed to obtain admin token.');
+                    return response()->json([
+                        'status' => 'keycloak_error',
+                        'message' => 'Error communicating with Keycloak.'
+                    ], 500);
+                }
+    
+                $adminToken = $adminResponse->json()['access_token'];
+    
+                // Step 2: Search for the user in Keycloak
+                $userSearchResponse = Http::withToken($adminToken)->get(
+                    config('keycloak.base_url') . '/admin/realms/' . config('keycloak.realm') . '/users',
+                    ['username' => $username]
+                );
+                // If user does not exist (status is checked by React)
+                if (empty($userSearchResponse->json())) {
+                    return response()->json([
+                        'status' => 'user_not_found',
+                        'message' => 'User does not exist.',
+                    ]);
+                }
+    
+                // If user exists but password is wrong (status is checked by React)
+                return response()->json([
+                    'status' => 'invalid_password',
+                    'message' => 'Invalid password.',
+                ]);
             }
     
             // Retrieve token and user info from Keycloak (user ID, roles, etc.)
@@ -141,9 +175,6 @@ class AuthController extends Controller
             Auth::guard()->setUser($localUser);
     
             return response()->json([
-                // 'message' => 'Authenticated successfully',
-                // 'token_data' => $tokenData,
-                // 'user_info' => $userInfo,
                 'authenticated' => true,
                 'roles' => $userInfo['resource_access']['account']['roles'] ?? 'user',
                 'user' => [

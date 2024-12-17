@@ -15,6 +15,7 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
 
     const [showLoader, setShowLoader] = useState(true);
     const [showTopButton, setShowTopButton] = useState(false);
+    const [roles, setRoles] = useState<string[]>([]);
 
     const goToTop = () => {
         document.body.scrollTop = 0;
@@ -39,6 +40,10 @@ const DefaultLayout = ({ children }: PropsWithChildren) => {
                 setShowLoader(false);
             }, 200);
         }
+        
+        // Fetch roles from session storage or backend
+        const storedRoles = JSON.parse(sessionStorage.getItem('user_roles') || '[]');
+        setRoles(storedRoles);
 
         return () => {
             window.removeEventListener('onscroll', onScrollHandler);

@@ -106,6 +106,11 @@ const userRoutes = [
         element: <Profile />,
     },
     {
+        path: '/auth/boxed-signup',
+        element: <RegisterBoxed />,
+        layout: 'blank',
+    },
+    {
         path: '/users/user-account-settings',
         element: <AccountSetting />,
     },

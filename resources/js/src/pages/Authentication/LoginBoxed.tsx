@@ -30,6 +30,35 @@ const LoginBoxed = () => {
     //     navigate('/');
     // };
 
+    // const roleMapping = (roles: string[]): string => {
+    //     if (roles.includes('view-applications')) {
+    //         return 'admin'; // Treat users with 'view-applications' as admins
+    //     } 
+    //     return 'user'; // Default role
+    // };
+
+    const roleMapping = (roles: string[]): string => {
+        const adminRoles = [
+            "manage-account",
+            "view-applications",
+            "view-consent",
+            "view-groups",
+            "manage-account-links",
+            "manage-consent",
+            "delete-account",
+            "view-profile"
+        ];
+    
+        // Check if the provided roles exactly match the adminRoles
+        const isAdmin = adminRoles.every((role) => roles.includes(role)) && roles.length === adminRoles.length;
+    
+        if (isAdmin) {
+            return 'admin'; // Return 'admin' if all roles match
+        }
+    
+        return 'user'; // Default role
+    };
+
     const submitForm = async (e: React.FormEvent) => {
         e.preventDefault();
         console.log('Submit button clicked');
@@ -56,7 +85,7 @@ const LoginBoxed = () => {
             // // Store the token
             // const token = response.data.token_data.access_token;
 
-            const { authenticated, roles, user } = response.data;
+            const { authenticated, roles, user, status, message } = response.data;
             
             // // Use the token in Authorization headers for future requests
             // if (token) {
@@ -66,29 +95,49 @@ const LoginBoxed = () => {
             //     console.warn('No token found in Local Storage');
             // }
 
-            if (authenticated) {
-                localStorage.setItem('user_role', roles); // Store role in localStorage
-                localStorage.setItem('user_info', JSON.stringify(user)); // Store user info in localStorage
-                // Redirect based on role
-            if (roles === 'admin_client') {
-                navigate('/');
-            } else {
-                navigate('/users/profile');
+            // Handle specific errors based on status field
+            if (status === 'user_not_found') {
+                alert('User does not exist. Redirecting to signup.');
+                navigate('/auth/boxed-signup');
+                return;
             }
+
+            if (status === 'invalid_password') {
+                alert('Login failed: Incorrect password.');
+                navigate('/auth/boxed-signin');
+                // Clear input fields
+                (document.getElementById('Email') as HTMLInputElement).value = '';
+                (document.getElementById('Password') as HTMLInputElement).value = '';
+                return;
+            }
+
+            if (authenticated) {
+            //     localStorage.setItem('user_role', roles); // Store role in localStorage
+            //     localStorage.setItem('user_info', JSON.stringify(user)); // Store user info in localStorage
+            //     // Redirect based on role
+            // if (roles === 'admin_client') {
+            //     navigate('/');
+            // } else {
+            //     navigate('/users/profile');
+            // }
+
+                const mappedRole = roleMapping(roles); // Map backend roles to 'user' or 'admin'
+
+                sessionStorage.setItem('user_roles', JSON.stringify([mappedRole]));
+                sessionStorage.setItem('user_info', JSON.stringify(user));
+
+                console.log('Roles:', roles);
+                console.log('User Info:', user);
+
+                // Redirect the user based on roles
+                navigate('/users/profile');
+
             } else {
                 alert('Authentication failed.');
             }
         } catch (error: any) {
             console.error('Login failed:', error.response?.data?.error || error.message);
             alert(`Login failed: ${error.response?.data?.error || error.message}`);
-    
-            // Redirect to signup if user not found
-            if (error.response?.status === 404) {
-                navigate('/auth/boxed-signup');
-            }
-            else {
-                alert(`Login failed: ${error.response?.data?.error || error.message}`);
-            }
         }
 
         console.log({

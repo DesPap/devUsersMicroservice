@@ -21,6 +21,10 @@ const Sidebar = () => {
         });
     };
 
+    // Fetch user roles from sessionStorage
+    const userRoles = JSON.parse(sessionStorage.getItem('user_roles') || '[]');
+    const isAdmin = userRoles.includes('admin');
+
     useEffect(() => {
         const selector = document.querySelector('.sidebar ul a[href="' + window.location.pathname + '"]');
         if (selector) {
