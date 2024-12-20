@@ -112,14 +112,6 @@ const LoginBoxed = () => {
             }
 
             if (authenticated) {
-            //     localStorage.setItem('user_role', roles); // Store role in localStorage
-            //     localStorage.setItem('user_info', JSON.stringify(user)); // Store user info in localStorage
-            //     // Redirect based on role
-            // if (roles === 'admin_client') {
-            //     navigate('/');
-            // } else {
-            //     navigate('/users/profile');
-            // }
 
                 const mappedRole = roleMapping(roles); // Map backend roles to 'user' or 'admin'
 

@@ -36,6 +36,9 @@ const RegisterBoxed = () => {
         const username = (document.getElementById('Name') as HTMLInputElement).value;
         const email = (document.getElementById('Email') as HTMLInputElement).value;
         const password = (document.getElementById('Password') as HTMLInputElement).value;
+
+        const clientId = import.meta.env.VITE_KEYCLOAK_CLIENT_ID; // Add client ID
+        const clientSecret = import.meta.env.VITE_KEYCLOAK_CLIENT_SECRET; // Add client secret
     
         try {
             // Make API call to Laravel for registration
@@ -43,17 +46,21 @@ const RegisterBoxed = () => {
                 username,
                 email,
                 password,
+                client_id: clientId,
+                client_secret: clientSecret,
             },
             { headers: { 'Content-Type': 'application/json' } }
         );
     
-            // Store the token in localStorage
-            localStorage.setItem('access_token', response.data.token);
+        // Store user data in sessionStorage
+        const userData = response.data.user; // Assuming backend returns user info and roles
+        sessionStorage.setItem('user_roles', JSON.stringify(userData.roles));
+        sessionStorage.setItem('username', userData.username);
     
             // Redirect to profile or another page after successful registration
             navigate('/users/profile');
         } catch (error) {
-            console.error('Registration failed:', error);
+            console.error('Registration failed:', error.response?.data || error.message);
         }
     };
 

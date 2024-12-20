@@ -200,14 +200,29 @@ class AuthController extends Controller
             'client_secret' => 'required|string',
             'username' => 'required|string',
             'password' => 'required|string',
-            'email' => 'required|string|email',
+            'isInitialRegistration' => 'required|boolean', // Indicates initial registration or profile update
+            'first_name' => 'nullable|string',
+            'last_name' => 'nullable|string',
+            'country' => 'nullable|string',
+            'address' => 'nullable|string',
+            'location' => 'nullable|string',
+            'phone' => 'nullable|string',
+            'company' => 'nullable|string',
+
         ]);
-    
+
         $username = $request->input('username');
+        $password = $request->input('password');
+        $isInitialRegistration = $request->input('isInitialRegistration');
         $firstName = $request->input('first_name');
         $lastName = $request->input('last_name');
-        $password = $request->input('password');
-        $email = $request->input('email');
+        $country = $request->input('country');
+        $address = $request->input('address');
+        $location = $request->input('location');
+        $phone = $request->input('phone');
+        $company = $request->input('company');
+
+        
     
         try {
             // Validate client credentials and obtain admin token
@@ -219,13 +234,16 @@ class AuthController extends Controller
             // Check if the user already exists in Keycloak
             $existingUser = $this->getKeycloakUserIdByUsername($username, $adminToken);
 
+            if ($isInitialRegistration) {
+            //Initial Registration
             if ($existingUser) {
                 Log::info('User already exists in Keycloak: ' . $username);
                 return response()->json([
-                    'message' => 'User already registered in Keycloak',
+                    'status' => 'user_exists',
+                    'message' => 'User already initially registered in Keycloak',
                     'user' => [
                         'username' => $username,
-                        'email' => $email,
+                        'email' => $username,
                         'first_name' => $firstName,
                         'last_name' => $lastName,
                     ]
@@ -239,9 +257,7 @@ class AuthController extends Controller
             ])->post(config('keycloak.base_url') . '/admin/realms/' . config('keycloak.realm') . '/users', [
                 'username' => $username,
                 'enabled' => true,
-                'email' => $email,
-                'firstName' => $firstName,
-                'lastName' => $lastName,
+                'email' => $username,
                 'credentials' => [
                     [
                         'type' => 'password',
@@ -270,16 +286,76 @@ class AuthController extends Controller
                 ['username' => $username],
                 [
                     'keycloak_id' => $keycloakUserId,
-                    'email' => $email,
-                    'first_name' => $firstName,
-                    'last_name' => $lastName,
+                    'email' => $username,
                     'is_active' => true,
                     'role' => 'user' // default role
                 ]
             );
+
+            // Cache the token
+            Cache::put("user_{$username}_access_token", $adminToken, now()->addMinutes(60));
     
             return response()->json(['message' => 'User registered successfully', 'user' => $localUser], 201);
     
+
+        } else {
+            // Account Settings Flow or Profile Completion
+            if ($existingUser) {
+                // Check if all fields are already filled
+                $userDetailsResponse = Http::withHeaders([
+                    'Authorization' => 'Bearer ' . $adminToken,
+                ])->get(config('keycloak.base_url') . "/admin/realms/" . config('keycloak.realm') . "/users/{$existingUser}");
+
+                if ($userDetailsResponse->failed()) {
+                    Log::error('Failed to fetch user details from Keycloak: ' . $userDetailsResponse->body());
+                    return response()->json(['error' => 'Failed to fetch user details from Keycloak'], 500);
+                }
+
+                $userDetails = $userDetailsResponse->json();
+                $isComplete = isset($userDetails['firstName'], $userDetails['lastName'], $userDetails['attributes']['company']);
+
+                if ($isComplete) {
+                    // User registration is already complete
+                    return response()->json([
+                        'status' => 'registration_complete',
+                        'message' => 'The registration of the user is already completed.',
+                    ], 200);
+                }
+            }
+
+            // Proceed to complete the registration
+            $updateResponse = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $adminToken,
+                'Content-Type' => 'application/json',
+            ])->put(config('keycloak.base_url') . "/admin/realms/" . config('keycloak.realm') . "/users/{$existingUser}", [
+                'firstName' => $firstName,
+                'lastName' => $lastName,
+                'attributes' => [
+                    'company' => $company,
+                ],
+            ]);
+
+            if ($updateResponse->failed()) {
+                Log::error('Failed to update user in Keycloak: ' . $updateResponse->body());
+                return response()->json(['error' => 'Failed to update user in Keycloak'], 500);
+            }
+
+            // Update local user record
+            $localUser = User::where('username', $username)->first();
+            $localUser->update([
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'company' => $company,
+            ]);
+
+            // Cache the token
+            Cache::put("user_{$username}_access_token", $adminToken, now()->addMinutes(60));
+
+            return response()->json([
+                'status' => 'registration_completed',
+                'message' => 'Registration completed successfully.',
+            ], 201);
+        }
         } catch (\Exception $e) {
             Log::error('Error during registration: ' . $e->getMessage());
             return response()->json(['error' => 'Registration failed'], 500);

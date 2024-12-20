@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+import ProtectedRoute from '../components/ProtectedRoute';
 const Index = lazy(() => import('../pages/Index'));
 const Analytics = lazy(() => import('../pages/Analytics'));
 const Finance = lazy(() => import('../pages/Finance'));
@@ -100,60 +101,17 @@ const MarkDownEditor = lazy(() => import('../pages/Forms/MarkDownEditor'));
 const DateRangePicker = lazy(() => import('../pages/Forms/DateRangePicker'));
 const Clipboard = lazy(() => import('../pages/Forms/Clipboard'));
 
-const userRoutes = [
-    {
-        path: '/users/profile',
-        element: <Profile />,
-    },
-    {
-        path: '/auth/boxed-signup',
-        element: <RegisterBoxed />,
-        layout: 'blank',
-    },
-    {
-        path: '/users/user-account-settings',
-        element: <AccountSetting />,
-    },
-    {
-        path: '/apps/todolist',
-        element: <Todolist />,
-    },
-    {
-        path: '/apps/notes',
-        element: <Notes />,
-    },
-    {
-        path: '/apps/contacts',
-        element: <Contacts />,
-    },
-    {
-        path: '/apps/mailbox',
-        element: <Mailbox />,
-    },
-    {
-        path: '/about',
-        element: <About />,
-        layout: 'blank',
-    },
-    {
-        path: '/apps/chat',
-        element: <Chat />,
-    },
-    {
-        path: '/apps/scrumboard',
-        element: <Scrumboard />,
-    },
-    {
-        path: '/apps/calendar',
-        element: <Calendar />,
-    },
-];
 
 const routes = [
     // dashboard
     {
         path: '/',
         element: <Index />,
+        // element: (
+        //     <ProtectedRoute allowedRoles={['admin']}>
+        //         <Index />
+        //     </ProtectedRoute>
+        // ),
     },
     // {
     //     path: '/index',
@@ -162,63 +120,119 @@ const routes = [
     // analytics page
     {
         path: '/analytics',
-        element: <Analytics />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Analytics />
+            </ProtectedRoute>
+        ),
     },
     // finance page
     {
         path: '/finance',
-        element: <Finance />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Finance />
+            </ProtectedRoute>
+        ),
     },
     // crypto page
     {
         path: '/crypto',
-        element: <Crypto />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Crypto />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/apps/todolist',
-        element: <Todolist />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Todolist />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/apps/notes',
-        element: <Notes />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Notes />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/apps/contacts',
-        element: <Contacts />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Contacts />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/apps/mailbox',
-        element: <Mailbox />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Mailbox />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/apps/invoice/list',
-        element: <List />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <List />
+            </ProtectedRoute>
+        ),
     },
     // Apps page
     {
         path: '/apps/chat',
-        element: <Chat />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Chat />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/apps/scrumboard',
-        element: <Scrumboard />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Scrumboard />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/apps/calendar',
-        element: <Calendar />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Calendar />
+            </ProtectedRoute>
+        ),
     },
     // preview page
     {
         path: '/apps/invoice/preview',
-        element: <Preview />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Preview />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/apps/invoice/add',
-        element: <Add />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Add />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/apps/invoice/edit',
-        element: <Edit />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Edit />
+            </ProtectedRoute>
+        ),
     },
     // components page
     {
@@ -263,19 +277,35 @@ const routes = [
     },
     {
         path: '/components/media-object',
-        element: <MediaObject />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <MediaObject />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/components/list-group',
-        element: <ListGroup />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <ListGroup />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/components/pricing-table',
-        element: <PricingTable />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <PricingTable />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/components/lightbox',
-        element: <LightBox />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <LightBox />
+            </ProtectedRoute>
+        ),
     },
     // elements page
     {
@@ -300,7 +330,11 @@ const routes = [
     },
     {
         path: '/elements/buttons-group',
-        element: <Buttongroups />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Buttongroups />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/elements/color-library',
@@ -312,27 +346,51 @@ const routes = [
     },
     {
         path: '/elements/infobox',
-        element: <Infobox />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Infobox />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/elements/jumbotron',
-        element: <Jumbotron />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Jumbotron />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/elements/loader',
-        element: <Loader />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Loader />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/elements/pagination',
-        element: <Pagination />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Pagination />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/elements/popovers',
-        element: <Popovers />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Popovers />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/elements/progress-bar',
-        element: <Progressbar />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Progressbar />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/elements/search',
@@ -354,7 +412,11 @@ const routes = [
     // charts page
     {
         path: '/charts',
-        element: <Charts />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Charts />
+            </ProtectedRoute>
+        ),
     },
     // widgets page
     {
@@ -374,52 +436,100 @@ const routes = [
     //  Tables page
     {
         path: '/tables',
-        element: <Tables />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Tables />
+            </ProtectedRoute>
+        ),
     },
     // Data Tables
     {
         path: '/datatables/basic',
-        element: <Basic />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Basic />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/datatables/advanced',
-        element: <Advanced />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Advanced />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/datatables/skin',
-        element: <Skin />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Skin />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/datatables/order-sorting',
-        element: <OrderSorting />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <OrderSorting />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/datatables/multi-column',
-        element: <MultiColumn />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <MultiColumn />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/datatables/multiple-tables',
-        element: <MultipleTables />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <MultipleTables />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/datatables/alt-pagination',
-        element: <AltPagination />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <AltPagination />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/datatables/checkbox',
-        element: <Checkbox />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Checkbox />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/datatables/range-search',
-        element: <RangeSearch />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <RangeSearch />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/datatables/export',
-        element: <Export />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <Export />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/datatables/column-chooser',
-        element: <ColumnChooser />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <ColumnChooser />
+            </ProtectedRoute>
+        ),
     },
     // Users page
     {
@@ -428,12 +538,20 @@ const routes = [
     },
     {
         path: '/users/user-account-settings',
-        element: <AccountSetting />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <AccountSetting />
+            </ProtectedRoute>
+        ),
     },
     // pages
     {
         path: '/pages/knowledge-base',
-        element: <KnowledgeBase />,
+        element: (
+            <ProtectedRoute allowedRoles={['admin']}>
+                <KnowledgeBase />
+            </ProtectedRoute>
+        ),
     },
     {
         path: '/pages/contact-us-boxed',
@@ -593,7 +711,7 @@ const routes = [
     },
 ];
 
-export { routes, userRoutes };
+export { routes };
 
 
 

@@ -111,12 +111,12 @@ const AccountSetting = () => {
                                 </div>
                                 <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <div>
-                                        <label htmlFor="name">Full Name</label>
-                                        <input id="name" type="text" placeholder="Jimmy Turner" className="form-input" />
+                                        <label htmlFor="first-name">First Name</label>
+                                        <input id="name" type="text" placeholder="Jimmy" className="form-input" />
                                     </div>
                                     <div>
-                                        <label htmlFor="profession">Profession</label>
-                                        <input id="profession" type="text" placeholder="Web Developer" className="form-input" />
+                                        <label htmlFor="last-name">Last Name</label>
+                                        <input id="name" type="text" placeholder="Turner" className="form-input" />
                                     </div>
                                     <div>
                                         <label htmlFor="country">Country</label>
@@ -125,7 +125,7 @@ const AccountSetting = () => {
                                             <option value="United States">United States</option>
                                             <option value="India">India</option>
                                             <option value="Japan">Japan</option>
-                                            <option value="China">China</option>
+                                            <option value="China">China</option> 
                                             <option value="Brazil">Brazil</option>
                                             <option value="Norway">Norway</option>
                                             <option value="Canada">Canada</option>
@@ -148,8 +148,8 @@ const AccountSetting = () => {
                                         <input id="email" type="email" placeholder="Jimmy@gmail.com" className="form-input" />
                                     </div>
                                     <div>
-                                        <label htmlFor="web">Website</label>
-                                        <input id="web" type="text" placeholder="Enter URL" className="form-input" />
+                                        <label htmlFor="company">Company</label>
+                                        <input id="web" type="text" placeholder="Company Name" className="form-input" />
                                     </div>
                                     <div>
                                         <label className="inline-flex cursor-pointer">
