@@ -13,7 +13,7 @@ class KeycloakMiddleware
         $username = $request->session()->get('username'); // Get the username from session
     
         if (!$username) {
-            return response()->json(['error' => 'Not authenticated'], 401);
+            return response()->json(['error' => 'User  not authenticated'], 401);
         }
     
         $accessToken = cache()->get("user_{$username}_access_token");

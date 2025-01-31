@@ -13,7 +13,8 @@ class User extends Authenticatable
 
     protected $primaryKey = 'id';
 
-    protected $fillable = ['keycloak_id', 'email', 'username', 'first_name', 'last_name', 'role', 'is_active'];
+    protected $fillable = ['keycloak_id', 'email', 'username', 'role', 'is_active', 'first_name', 
+    'last_name', 'country', 'address', 'location', 'phone', 'company', 'is_initial_registration'];
 
     // Method to check if user has a specific role
     public function hasRole($role)

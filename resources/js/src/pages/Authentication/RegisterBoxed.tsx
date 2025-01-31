@@ -33,7 +33,7 @@ const RegisterBoxed = () => {
     const submitForm = async (event: React.FormEvent) => {
         event.preventDefault();
     
-        const username = (document.getElementById('Name') as HTMLInputElement).value;
+        const username = (document.getElementById('Email') as HTMLInputElement).value;
         const email = (document.getElementById('Email') as HTMLInputElement).value;
         const password = (document.getElementById('Password') as HTMLInputElement).value;
 
@@ -46,21 +46,35 @@ const RegisterBoxed = () => {
                 username,
                 email,
                 password,
+                isInitialRegistration: true,
                 client_id: clientId,
                 client_secret: clientSecret,
             },
             { headers: { 'Content-Type': 'application/json' } }
         );
+
+        const userData = response.data.user; // backend returns user info and roles
+
+        if (response.data.status === 'user_exists') {
+            alert(response.data.message); // Show user-friendly message
+            navigate('/users/user-account-settings'); // Redirect to account settings
+        } else {
+            alert('Registration successful! Redirecting to your profile...');
+            sessionStorage.setItem('user_roles', JSON.stringify(['user'])); // Store user roles
+            sessionStorage.setItem('username', userData.username);
+            navigate('/users/profile'); // Redirect to profile after successful registration
+        }
     
-        // Store user data in sessionStorage
-        const userData = response.data.user; // Assuming backend returns user info and roles
-        sessionStorage.setItem('user_roles', JSON.stringify(userData.roles));
-        sessionStorage.setItem('username', userData.username);
+        // // Store user data in sessionStorage
+        // const userData = response.data.user; // backend returns user info and roles
+        // sessionStorage.setItem('user_roles', JSON.stringify(userData.roles));
+        // sessionStorage.setItem('username', userData.username);
     
-            // Redirect to profile or another page after successful registration
-            navigate('/users/profile');
+        //     // Redirect to profile after successful registration
+        //     navigate('/users/profile');
         } catch (error) {
             console.error('Registration failed:', error.response?.data || error.message);
+            alert(error.response?.data?.message || 'Registration failed. Please try again.');
         }
     };
 

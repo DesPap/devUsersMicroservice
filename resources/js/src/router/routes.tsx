@@ -536,13 +536,18 @@ const routes = [
         path: '/users/profile',
         element: <Profile />,
     },
+    // {
+    //     path: '/users/user-account-settings',
+    //     element: (
+    //         <ProtectedRoute allowedRoles={['admin']}>
+    //             <AccountSetting />
+    //         </ProtectedRoute>
+    //     ),
+    // },
     {
         path: '/users/user-account-settings',
-        element: (
-            <ProtectedRoute allowedRoles={['admin']}>
-                <AccountSetting />
-            </ProtectedRoute>
-        ),
+        element:<AccountSetting />,
+        layout: 'blank',
     },
     // pages
     {

@@ -16,10 +16,16 @@ return new class extends Migration
             $table->string('keycloak_id')->unique();
             $table->string('email')->unique();
             $table->string('username')->unique();
-            $table->string('first_name');
-            $table->string('last_name');
             $table->string('role')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->string('first_name');
+            $table->string('last_name');
+            $table->string('country');
+            $table->string('address');
+            $table->string('location');
+            $table->string('phone');
+            $table->string('company');
+            $table->boolean('is_initial_registration')->default(true);
             $table->timestamps(); // created_at and updated_at
         });
     }

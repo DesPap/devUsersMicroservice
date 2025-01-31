@@ -7,26 +7,39 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\EmailVerificationMail;
 use Illuminate\Http\Request;
 
 class AuthController extends Controller
 /**
  * getUserInfo: fetch the latest user info and roles.
- * checkAuthStatus: Validates the token with Keycloak and responds if the user is authenticated.
+ * checkAuthStatus: Validates the token with Keycloak and responds if the user is authenticated. Only for explicit check, as protected routes are automaticaly checked by the KeyclokMiddleware
  * authenticate: Handles login in keycloak, checking if the user exists in the local db.
  * registerUser: Registers a new user in Keycloak and saves the data locally.
- * assignRoleToUser: Fetches roles from Keycloak and stores them locally, with Keycloak handling role permissions.
- * unregisterUser: Deactivates a user locally and removes them from Keycloak.
+ * assignRoleToUser: Used in registerUser. Fetches roles from Keycloak and stores the provided one, with Keycloak handling role permissions.
+ * getAdminToken: Get an admin token for Keycloak API interactions.
+ * waitForEmailVerification: TODO to connect it with the registration. Wait for a maximum of 5 minutes (30sec x 10times = 5min), for the email verification by the user
+ *                           If not verified after 5 minutes, delete the entry from Keycloak
+ * unregisterUser: Deactivates a user locally and removes the record from Keycloak.
  */
 
  {
     /**
      * getUserInfo: fetch the latest user info and roles.
      */
-
      public function getUserInfo(Request $request)
      {
-         $keycloakUser = $request->keycloak_user; // Retrieved from middleware
+        if (!$request->has('keycloak_user')) {
+            Log::error("No user info for $request->keycloak_user");
+            return response()->json(
+                [
+                    'status' => 'no_user_info',
+                    'message' => 'User information not available'
+                ], 401); // redirect to login page
+        }
+        
+         $keycloakUser = $request->keycloak_user; // Retrieved from KeycloakMiddleware
          return response()->json([
              'user' => [
                  'username' => $keycloakUser['preferred_username'],
@@ -39,7 +52,7 @@ class AuthController extends Controller
 
 
     /**
-     *  Validate the token with Keycloak and responds if the user is authenticated. Verify authentication on protected routes
+     *  Validate the token with Keycloak. Responds if the user is authenticated. Verify authentication on protected routes
      */
     public function checkAuthStatus(Request $request)
     {
@@ -54,6 +67,7 @@ class AuthController extends Controller
             $response = Http::withToken($token)->get(config('keycloak.base_url') . '/realms/' . config('keycloak.realm') . '/protocol/openid-connect/userinfo');
     
             if ($response->failed()) {
+                Log::error('Invalid access token: ' . $token . '  /auth/check');
                 return response()->json(['authenticated' => false, 'error' => 'Invalid access token'], 401);
             }
     
@@ -100,8 +114,20 @@ class AuthController extends Controller
                 'scope' => 'openid profile email',
             ]);
 
+            // Log Keycloak response
+            Log::error('Keycloak Response: ' . json_encode($response->json()));
+
 
             if ($response->failed()) {
+                $responseData = $response->json();
+            
+                // Check invalid password
+                if (isset($responseData['error']) && $responseData['error'] === 'invalid_grant') {
+                    return response()->json([
+                        'status' => 'invalid_password',
+                        'message' => 'Invalid password.',
+                    ]);
+                }
                 // Step 1: Obtain admin token to search for user existence
                 $adminResponse = Http::asForm()->post(config('keycloak.base_url') . '/realms/' . config('keycloak.realm') . '/protocol/openid-connect/token', [
                     'client_id' => $clientId,
@@ -131,12 +157,6 @@ class AuthController extends Controller
                         'message' => 'User does not exist.',
                     ]);
                 }
-    
-                // If user exists but password is wrong (status is checked by React)
-                return response()->json([
-                    'status' => 'invalid_password',
-                    'message' => 'Invalid password.',
-                ]);
             }
     
             // Retrieve token and user info from Keycloak (user ID, roles, etc.)
@@ -153,6 +173,12 @@ class AuthController extends Controller
             }
     
             $userInfo = $userInfoResponse->json();
+
+            // Extract isInitialRegistration from attributes
+            $isInitialRegistration = false;
+            if (!empty($userInfo['attributes']['isInitialRegistration'])) {
+                $isInitialRegistration = filter_var($userInfo['attributes']['isInitialRegistration'][0], FILTER_VALIDATE_BOOLEAN);
+            }
 
             // Cache tokens
             Cache::put("user_{$username}_access_token", $tokenData['access_token'], now()->addSeconds($tokenData['expires_in']));
@@ -181,6 +207,8 @@ class AuthController extends Controller
                     'username' => $userInfo['preferred_username'],
                     'email' => $userInfo['email'],
                     'name' => $userInfo['name'] ?? null,
+                    'is_initial_registration' => $isInitialRegistration,
+                    // 'emailVerified' => $userInfo['email_verified'] ?? false,  // email verification status
                 ],
             ]);
         } catch (\Exception $e) {
@@ -191,7 +219,9 @@ class AuthController extends Controller
 
 
     /**
-     * Register a new user in Keycloak and store in the local DB.
+     * Register a new user in Keycloak and store in the local DB. 
+     * Allow initial registration with username and password.
+     * If not initial registration update the user's profile in Keycloak and the user table
      */
     public function registerUser(Request $request)
     {
@@ -236,7 +266,7 @@ class AuthController extends Controller
 
             if ($isInitialRegistration) {
             //Initial Registration
-            if ($existingUser) {
+            if ($existingUser) { 
                 Log::info('User already exists in Keycloak: ' . $username);
                 return response()->json([
                     'status' => 'user_exists',
@@ -258,22 +288,43 @@ class AuthController extends Controller
                 'username' => $username,
                 'enabled' => true,
                 'email' => $username,
+                'firstName' => $firstName ?? 'DefaultFirstName',   // necessary for Keycloak to consider the registration as fully set up
+                'lastName' => $lastName ?? 'DefaultLastName',      // necessary for Keycloak to consider the registration as fully set up
+                'attributes' => [
+                    'isInitialRegistration' => 'true', // Flag to identify initial registration
+                ],
                 'credentials' => [
                     [
                         'type' => 'password',
                         'value' => $password,
-                        'temporary' => false
+                        'temporary' => false 
                     ]
-                ]
+                    ],
+                    // 'requiredActions' => ['VERIFY_EMAIL'] // Forces email verification in Keycloak before allowing login.
             ]);
     
             if ($response->failed()) {
-                Log::error('Failed to create user in Keycloak: ' . $response->body());
-                return response()->json(['error' => 'Failed to register user in Keycloak'], 500);
+                Log::error('Failed to create initial registration in Keycloak: ' . $response->body());
+                return response()->json([
+                    'status' => 'initial_registration_failed',
+                    'message' => 'Initial user registation in Keycloak failed'
+                ], 500);
             }
     
             $keycloakUserId = $response->json()['id'] ?? $this->getKeycloakUserIdByUsername($username, $adminToken);
     
+            // // Wait for email verification (Max 5 minutes)
+            // $isVerified = $this->waitForEmailVerification($keycloakUserId, $adminToken);
+            // if (!$isVerified) {
+            //     Log::warning("Email verification not completed for $username within the allowed time.", [
+            //         'username' => $username,
+            //     ]);
+            //     return response()->json([
+            //         'status' => 'email_verification_pending',
+            //         'message' => 'Email verification not completed in time. Please verify your email to proceed.'
+            //     ], 408);
+            // }
+
             // Assign 'user' role to the newly created user
             $roleResponse = $this->assignRoleToUser($adminToken, $keycloakUserId, 'user');
             if ($roleResponse->failed()) {
@@ -288,18 +339,43 @@ class AuthController extends Controller
                     'keycloak_id' => $keycloakUserId,
                     'email' => $username,
                     'is_active' => true,
-                    'role' => 'user' // default role
+                    'role' => 'user', // default role
+                    'is_initial_registration' => true,
                 ]
             );
 
-            // Cache the token
-            Cache::put("user_{$username}_access_token", $adminToken, now()->addMinutes(60));
-    
-            return response()->json(['message' => 'User registered successfully', 'user' => $localUser], 201);
+            // Retrieve user's own access token
+            $userTokenResponse = Http::asForm()->post(config('keycloak.base_url') . '/realms/' . config('keycloak.realm') . '/protocol/openid-connect/token', [
+                'client_id' => config('keycloak.client_id'),
+                'client_secret' => config('keycloak.client_secret'),
+                'grant_type' => 'password',
+                'username' => $username,
+                'password' => $password,
+            ]);
+
+            if ($userTokenResponse->failed()) {
+                Log::error('Failed to retrieve user token: ' . $userTokenResponse->body());
+                return response()->json([
+                    'status' => 'log_in_failed',
+                    'message' => 'Failed to log in user after initial registration.'
+                ], 500);
+            }
+
+            $userToken = $userTokenResponse->json();
+
+            // Cache the user's token
+            $this->cacheUserToken($username, $userToken);
+                
+            return response()->json([
+                'status' => 'initial_registration_successful',
+                'message' => 'User initially registered successfully', 
+                'user' => $localUser,
+                'isInitialRegistration' => true,
+            ], 201);
     
 
         } else {
-            // Account Settings Flow or Profile Completion
+            // Full Registration and Profile Completion
             if ($existingUser) {
                 // Check if all fields are already filled
                 $userDetailsResponse = Http::withHeaders([
@@ -308,17 +384,22 @@ class AuthController extends Controller
 
                 if ($userDetailsResponse->failed()) {
                     Log::error('Failed to fetch user details from Keycloak: ' . $userDetailsResponse->body());
-                    return response()->json(['error' => 'Failed to fetch user details from Keycloak'], 500);
+                    return response()->json([
+                        'status' => 'user_details_fetch_failed',
+                        'message' => 'Failed to fetch user details from Keycloak'
+                    ], 500);
                 }
 
                 $userDetails = $userDetailsResponse->json();
-                $isComplete = isset($userDetails['firstName'], $userDetails['lastName'], $userDetails['attributes']['company']);
-
+                $isComplete = isset($userDetails['username'], $userDetails['firstName'], $userDetails['lastName'], 
+                                    $userDetails['attributes']['company'], $userDetails['attributes']['country'], $userDetails['attributes']['address'], $userDetails['attributes']['location'], $userDetails['attributes']['phone']);
+              
                 if ($isComplete) {
                     // User registration is already complete
                     return response()->json([
-                        'status' => 'registration_complete',
+                        'status' => 'registration_completed',
                         'message' => 'The registration of the user is already completed.',
+                        'isInitialRegistration' => false,
                     ], 200);
                 }
             }
@@ -331,13 +412,21 @@ class AuthController extends Controller
                 'firstName' => $firstName,
                 'lastName' => $lastName,
                 'attributes' => [
+                    'country' => $country,
+                    'address' => $address,
+                    'location' => $location,
+                    'phone' => $phone,
                     'company' => $company,
+                    'isInitialRegistration' => 'false'
                 ],
             ]);
 
             if ($updateResponse->failed()) {
                 Log::error('Failed to update user in Keycloak: ' . $updateResponse->body());
-                return response()->json(['error' => 'Failed to update user in Keycloak'], 500);
+                return response()->json([
+                    'status' => 'update_failed',
+                    'message' => 'Failed to update user in Keycloak'
+                ], 500);
             }
 
             // Update local user record
@@ -345,21 +434,60 @@ class AuthController extends Controller
             $localUser->update([
                 'first_name' => $firstName,
                 'last_name' => $lastName,
+                'country' => $country,
+                'address' => $address,
+                'location' => $location,
+                'phone' => $phone,
                 'company' => $company,
+                'is_initial_registration' => false,
             ]);
 
-            // Cache the token
-            Cache::put("user_{$username}_access_token", $adminToken, now()->addMinutes(60));
+            
+            // Retrieve user's own access token
+            $userTokenResponse = Http::asForm()->post(config('keycloak.base_url') . '/realms/' . config('keycloak.realm') . '/protocol/openid-connect/token', [
+                'client_id' => config('keycloak.client_id'),
+                'client_secret' => config('keycloak.client_secret'),
+                'grant_type' => 'password',
+                'username' => $username,
+                'password' => $password,
+            ]);
+
+            if ($userTokenResponse->failed()) {
+                Log::error('Failed to retrieve user token: ' . $userTokenResponse->body());
+                return response()->json([
+                    'status' => 'log_in_failed',
+                    'message' => 'Failed to log in user after registration.'
+                ], 500);
+            }
+
+            $userToken = $userTokenResponse->json();
+
+            // Cache the user's token
+            $this->cacheUserToken($username, $userToken);
 
             return response()->json([
                 'status' => 'registration_completed',
                 'message' => 'Registration completed successfully.',
+                'user' => $localUser,
+                'isInitialRegistration' => false,
             ], 201);
+
+
         }
         } catch (\Exception $e) {
             Log::error('Error during registration: ' . $e->getMessage());
             return response()->json(['error' => 'Registration failed'], 500);
         }
+    }
+
+    /**
+     * Cache User Token
+     */
+
+     private function cacheUserToken($username, $tokenData)
+    {
+        Cache::put("user_{$username}_access_token", $tokenData['access_token'], now()->addSeconds($tokenData['expires_in']));
+        Cache::put("user_{$username}_refresh_token", $tokenData['refresh_token'], now()->addSeconds($tokenData['refresh_expires_in']));
     }
 
     /**
@@ -422,7 +550,129 @@ class AuthController extends Controller
     }
 
     /**
-     * Unregister user in Keycloak and deactivate locally.
+     * Wait for a maximum of 5 minutes (30sec x 10times = 5min), for the email verification by the user
+     * If not verified after 5 minutes, delete the entry from Keycloak
+     */
+    private function waitForEmailVerification($userId, $adminToken)
+    {
+        
+        $maxAttempts = 10;
+        $waitSeconds = 30; 
+
+        // attempt to check the email verification up to 10 times, every 30 seconds (total 5 minutes)
+        for ($i = 0; $i < $maxAttempts; $i++) {
+            // Fetch the user details from Keycloak
+            $userDetailsResponse = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $adminToken,
+            ])->get(config('keycloak.base_url') . "/admin/realms/" . config('keycloak.realm') . "/users/{$userId}");
+
+            if ($userDetailsResponse->successful()) {
+                $userDetails = $userDetailsResponse->json();
+                
+                // If email is verified, return true
+                if (!empty($userDetails['emailVerified']) && $userDetails['emailVerified'] === true) {
+                    return true;
+                }
+            }
+
+            // Wait 30 seconds before trying to check again, if the user verified the email 
+            sleep($waitSeconds);
+        }
+
+        // If the email isn't verified within 5 minutes, delete the user
+        Http::withHeaders([
+            'Authorization' => 'Bearer ' . $adminToken,
+        ])->delete(config('keycloak.base_url') . "/admin/realms/" . config('keycloak.realm') . "/users/{$userId}");
+
+        Log::warning("Deleted unverified user: {$userId}");
+        return false; // return true only if the email verification is completed
+    }
+
+
+    public function resendVerificationEmail(Request $request)
+{
+    $request->validate([
+        'username' => 'required|string',
+        'client_id' => 'required|string',
+        'client_secret' => 'required|string',
+    ]);
+
+    $username = $request->input('username');
+    $clientId = $request->input('client_id');
+    $clientSecret = $request->input('client_secret');
+
+    try {
+        // Validate client credentials
+        if ($clientId !== config('keycloak.client_id') || $clientSecret !== config('keycloak.client_secret')) {
+            Log::error("Invalid client credentials for email resend request.");
+            return response()->json(['error' => 'Invalid client credentials.'], 401);
+        }
+
+        // Obtain admin token
+        $adminToken = $this->getAdminToken($request);
+        if (!$adminToken) {
+            return response()->json(['error' => 'Failed to authenticate with Keycloak.'], 401);
+        }
+
+        // Search for user in Keycloak
+        $userSearchResponse = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $adminToken,
+        ])->get(config('keycloak.base_url') . '/admin/realms/' . config('keycloak.realm') . '/users', [
+            'username' => $username,
+        ]);
+
+        if ($userSearchResponse->failed() || empty($userSearchResponse->json())) {
+            Log::warning("User {$username} not found in Keycloak.");
+            return response()->json(['status' => 'user_not_found', 'message' => 'User not found in Keycloak.'], 404);
+        }
+
+        // Get User ID
+        $userId = $userSearchResponse->json()[0]['id'];
+
+        // Check if email is already verified
+        $userDetailsResponse = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $adminToken,
+        ])->get(config('keycloak.base_url') . "/admin/realms/" . config('keycloak.realm') . "/users/{$userId}");
+
+        if ($userDetailsResponse->successful()) {
+            $userDetails = $userDetailsResponse->json();
+            if (!empty($userDetails['emailVerified']) && $userDetails['emailVerified'] === true) {
+                return response()->json([
+                    'status' => 'email_already_verified',
+                    'message' => 'This email is already verified.'
+                ], 200);
+            }
+        }
+
+        // Trigger email verification action
+        $triggerActionResponse = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $adminToken,
+            'Content-Type' => 'application/json',
+        ])->put(config('keycloak.base_url') . "/admin/realms/" . config('keycloak.realm') . "/users/{$userId}", [
+            'requiredActions' => ['VERIFY_EMAIL'], // Triggers the email verification process again
+        ]);
+
+        if ($triggerActionResponse->failed()) {
+            Log::error("Failed to trigger email verification for user {$username}");
+            return response()->json([
+                'status' => 'resend_failed',
+                'message' => 'Failed to resend verification email.'
+            ], 500);
+        }
+
+        return response()->json([
+            'status' => 'verification_email_resent',
+            'message' => 'Verification email has been resent successfully.'
+        ], 200);
+
+    } catch (\Exception $e) {
+        Log::error("Error resending verification email: " . $e->getMessage());
+        return response()->json(['error' => 'An error occurred while resending verification email.'], 500);
+    }
+}
+
+    /**
+     *  
      */
     public function unregisterUser(Request $request)
     {
@@ -495,36 +745,94 @@ class AuthController extends Controller
     /**
      * Handle user logout and invalidate the Keycloak session.
      */
-    public function logout(Request $request)
-    {
-        try {
-            // Extract the token, client_id, and client_secret from the request
-            $token = $request->input('token');
-            $clientId = $request->input('client_id');
-            $clientSecret = $request->input('client_secret');
-    
-            if (!$token || !$clientId || !$clientSecret) {
-                return response()->json(['error' => 'Missing token or client credentials'], 400);
-            }
-    
-            // Prepare the Keycloak logout URL
-            $keycloakLogoutUrl = config('keycloak.external_base_url') . '/realms/' . config('keycloak.realm') . '/protocol/openid-connect/logout?' . http_build_query([
+
+     public function logout(Request $request)
+     {
+         try {
+             $request->validate([
+                 'username' => 'required|string',
+                 'client_id' => 'required|string',
+                 'client_secret' => 'required|string',
+             ]);
+     
+             $username = $request->input('username');
+             $clientId = $request->input('client_id');
+             $clientSecret = $request->input('client_secret');
+     
+             if ($clientId !== config('keycloak.client_id') || $clientSecret !== config('keycloak.client_secret')) {
+                 Log::error('Invalid client credentials provided during logout.');
+                 return response()->json(['error' => 'Invalid client credentials.'], 401);
+             }
+     
+             // Retrieve the refresh token from Laravel cache
+             $refreshToken = Cache::get("user_{$username}_refresh_token");
+     
+             if (!$refreshToken) {
+                 return response()->json(['error' => 'No active session found for this user'], 400);
+             }
+
+            // Construct Keycloak logout URL for back-channel logout
+            $keycloakLogoutUrl = config('keycloak.base_url') . '/realms/' . config('keycloak.realm') . '/protocol/openid-connect/logout';
+
+            // Call Keycloak logout API using POST request (back-channel logout)
+            $logoutResponse = Http::asForm()->post($keycloakLogoutUrl, [
                 'client_id' => $clientId,
                 'client_secret' => $clientSecret,
-                'refresh_token' => $token,
-            ]);
-    
-            return response()->json([
-                'message' => 'Logout URL generated',
-                'keycloak_logout_url' => $keycloakLogoutUrl,
+                'refresh_token' => $refreshToken,
             ]);
 
-            return($keycloakLogoutUrl);
-        } catch (\Exception $e) {
-            Log::error('Failed to log out: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to log out'], 500);
-        }
-    }
+            if ($logoutResponse->failed()) {
+                Log::error('Failed to log out from Keycloak: ' . $logoutResponse->body());
+                return response()->json([
+                    'error' => 'Failed to log out from Keycloak',
+                    'details' => $logoutResponse->json(),
+                ], 500);
+            }
+     
+             // Remove tokens from Laravel cache
+             Cache::forget("user_{$username}_access_token");
+             Cache::forget("user_{$username}_refresh_token");
+     
+             return response()->json(['message' => 'Successfully logged out and session ended'], 200);
+         } catch (\Exception $e) {
+             Log::error('Logout error: ' . $e->getMessage());
+             return response()->json(['error' => 'Logout failed'], 500);
+         }
+     }
+
+
+
+
+    // public function logout(Request $request)
+    // {
+    //     try {
+    //         // Extract the token, client_id, and client_secret from the request
+    //         $token = $request->input('token');
+    //         $clientId = $request->input('client_id');
+    //         $clientSecret = $request->input('client_secret');
+    
+    //         if (!$token || !$clientId || !$clientSecret) {
+    //             return response()->json(['error' => 'Missing token or client credentials'], 400);
+    //         }
+    
+    //         // Prepare the Keycloak logout URL
+    //         $keycloakLogoutUrl = config('keycloak.external_base_url') . '/realms/' . config('keycloak.realm') . '/protocol/openid-connect/logout?' . http_build_query([
+    //             'client_id' => $clientId,
+    //             'client_secret' => $clientSecret,
+    //             'refresh_token' => $token,
+    //         ]);
+    
+    //         return response()->json([
+    //             'message' => 'Logout URL generated',
+    //             'keycloak_logout_url' => $keycloakLogoutUrl,
+    //         ]);
+
+    //         return($keycloakLogoutUrl);
+    //     } catch (\Exception $e) {
+    //         Log::error('Failed to log out: ' . $e->getMessage());
+    //         return response()->json(['error' => 'Failed to log out'], 500);
+    //     }
+    // }
 
 
     //Previous Configuration in Keycloak
